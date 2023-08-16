@@ -32,4 +32,10 @@ public class UserController {
         return service.getAllUsers();
     }
 
+
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody User user){
+        return service.loginUser(user);
+    }
+
 }

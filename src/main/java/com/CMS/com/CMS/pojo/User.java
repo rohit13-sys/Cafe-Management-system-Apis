@@ -21,7 +21,6 @@ public class User implements Serializable {
     private Integer id;
 
     @NotBlank(message = "username is mandatory")
-    @Column(unique = true)
     private String username;
 
     @NotBlank(message = "password is mandatory")
@@ -32,6 +31,7 @@ public class User implements Serializable {
     private String contactNumber;
 
     @NotBlank(message = "email is mandatory")
+    @Column(unique = true)
     private String email;
 
     @NotBlank(message = "status is mandatory")

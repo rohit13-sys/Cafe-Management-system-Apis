@@ -7,5 +7,6 @@ public class CafeConstants {
     public static final String ALREADY_EXISTS="Already Exists!!!!";
 
     public static final String CREATED="Created Successfully";
+    public static final String BAD_CREDENTIALS="Invalid Credentials";
 
 }

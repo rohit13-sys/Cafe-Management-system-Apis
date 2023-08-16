@@ -10,4 +10,6 @@ public interface IUserService {
     public ResponseEntity<String> createUser(User user);
 
     ResponseEntity<List<User>> getAllUsers();
+
+    ResponseEntity<String> loginUser(User user);
 }
