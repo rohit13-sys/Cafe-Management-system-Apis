@@ -1,14 +1,12 @@
 package com.CMS.com.CMS.rest;
 
+import com.CMS.com.CMS.pojo.Role;
 import com.CMS.com.CMS.pojo.User;
 import com.CMS.com.CMS.service.IUserService;
-import com.CMS.com.CMS.utils.CafeUtils;
-import lombok.SneakyThrows;
+import com.CMS.com.CMS.wrapper.UserWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -28,14 +26,16 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers(){
-        return service.getAllUsers();
-    }
+//    @PreAuthorize("hasRole('ADMIN')"
+    @Secured("ADMIN")
+    public ResponseEntity<List<UserWrapper>> getAllUsers() {return service.getAllUsers();}
 
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody User user){
-        return service.loginUser(user);
-    }
+    public ResponseEntity<String> login(@RequestBody User user) {return service.loginUser(user);}
 
+    @PostMapping("/create-role")
+    public ResponseEntity<String> createRole(@RequestBody Role role){
+        return service.createRole(role);
+    }
 }

@@ -1,17 +1,18 @@
 package com.CMS.com.CMS.JWT;
 
+import com.CMS.com.CMS.pojo.Role;
 import com.CMS.com.CMS.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -25,8 +26,12 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         userDetail = repo.findByEmail(username);
         if (!Objects.isNull(userDetail)) {
-            return new User(userDetail.getEmail()
-                    , userDetail.getPassword(), new ArrayList<>());
+            List<Role> roles=userDetail.getRoles();
+            List<GrantedAuthority> grantedAuthorities = roles.stream().map(r -> {
+                return new SimpleGrantedAuthority(r.getRole());
+            }).collect(Collectors.toList());
+            return new User(userDetail.getUsername()
+                    , userDetail.getPassword(),grantedAuthorities);
         } else {
             return null;
         }

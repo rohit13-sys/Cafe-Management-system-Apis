@@ -16,7 +16,7 @@ public class JWTUtil {
 
     private static final String secret="RKDeadshot9723";
 
-    public static final long JWT_TOKEN_VALIDITY = 2*60;
+    public static final long JWT_TOKEN_VALIDITY = 120*60;
 
     public String getUsernameFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
@@ -58,9 +58,8 @@ public class JWTUtil {
     }
 
 
-    public String generateToken(String username,String role) {
+    public String generateToken(String username) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("role",role);
         return doGenerateToken(claims, username);
     }
 
