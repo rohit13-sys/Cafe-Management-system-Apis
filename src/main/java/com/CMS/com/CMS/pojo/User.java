@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.GenericGenerator;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,13 +21,11 @@ import java.util.stream.Collectors;
 
 @Entity
 @Data
-public class User implements Serializable, UserDetails {
+public class User extends StandardEntity implements UserDetails  {
 
     private static final long serialVersionUID=1L;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private Integer id;
+
 
     @NotBlank(message = "username is mandatory")
     private String username;

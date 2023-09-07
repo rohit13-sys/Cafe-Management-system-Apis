@@ -14,7 +14,7 @@ import java.util.List;
 @AllArgsConstructor @NoArgsConstructor
 public class UserWrapper {
 
-    private Integer id;
+    private String id;
     private String username;
     private String contactNumber;
     private String email;
