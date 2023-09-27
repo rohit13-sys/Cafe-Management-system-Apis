@@ -1,7 +1,5 @@
 package com.CMS.com.CMS.service;
 
-import com.CMS.com.CMS.service.IGenericService;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;

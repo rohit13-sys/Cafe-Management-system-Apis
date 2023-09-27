@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Entity
-@Data
+@Getter @Setter
 public class User extends StandardEntity implements UserDetails  {
 
     private static final long serialVersionUID=1L;
@@ -28,7 +28,7 @@ public class User extends StandardEntity implements UserDetails  {
 
 
     @NotBlank(message = "username is mandatory")
-    private String username;
+    private String name;
 
     @NotBlank(message = "password is mandatory")
     private String password;
@@ -39,7 +39,7 @@ public class User extends StandardEntity implements UserDetails  {
 
     @NotBlank(message = "email is mandatory")
     @Column(unique = true)
-    private String email;
+    private String username;
 
     @NotBlank(message = "status is mandatory")
     private String status;
@@ -79,6 +79,6 @@ public class User extends StandardEntity implements UserDetails  {
 
     @Override
     public String getUsername(){
-        return this.email;
+        return this.username;
     }
 }

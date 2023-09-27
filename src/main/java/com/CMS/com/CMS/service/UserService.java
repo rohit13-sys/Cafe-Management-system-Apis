@@ -3,6 +3,7 @@ package com.CMS.com.CMS.service;
 import com.CMS.com.CMS.JWT.CustomUserDetailsService;
 import com.CMS.com.CMS.JWT.JWTUtil;
 import com.CMS.com.CMS.constants.CafeConstants;
+import com.CMS.com.CMS.exceptions.StatusUpdateException;
 import com.CMS.com.CMS.pojo.Role;
 import com.CMS.com.CMS.pojo.User;
 import com.CMS.com.CMS.repository.RoleRepository;
@@ -13,21 +14,28 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AuthorizationServiceException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ReflectionUtils;
+import org.springframework.web.client.ResourceAccessException;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-public class UserService extends GenericService<User>{
+public class UserService extends GenericService<User> {
 
     @Autowired
     private UserRepository userRepo;
@@ -50,18 +58,18 @@ public class UserService extends GenericService<User>{
 
     public UserService(UserRepository repository) {
         super(repository);
-        this.userRepo=repository;
+        this.userRepo = repository;
     }
 
 
     @SneakyThrows
     public ResponseEntity<String> createUser(User user) {
         log.info("Inside SignUp {}", user);
-        List<Role> roles=new ArrayList<>();
-        if(!user.getRoles().isEmpty()){
+        List<Role> roles = new ArrayList<>();
+        if (!user.getRoles().isEmpty()) {
 //            List<Role> roleDtos=new ArrayList<>();
-            for(Role roleDto: user.getRoles()){
-                Role role=roleRepo.findByRole(roleDto.getRole());
+            for (Role roleDto : user.getRoles()) {
+                Role role = roleRepo.findByRole(roleDto.getRole());
                 roles.add(role);
             }
         }
@@ -72,8 +80,8 @@ public class UserService extends GenericService<User>{
     }
 
 
-    public ResponseEntity<List<UserWrapper>> getAllUsers() {
-        List<User> users= userRepo.findAll();
+    public ResponseEntity<List<UserWrapper>> getAllUsers(Specification<User> specs) {
+        List<User> users = userRepo.findAll(Specification.where(specs));
         List<UserWrapper> response=users.stream().map(this::convertUserToUSerWrapper).collect(Collectors.toList());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -88,22 +96,36 @@ public class UserService extends GenericService<User>{
         );
         if (auth.isAuthenticated()) {
             if (customUserDetailsService.getUserDetail().getStatus().equalsIgnoreCase("active")) {
-
-
-                String jwtToken = jwtUtil.generateToken(customUserDetailsService.getUserDetail().getEmail());
+                String jwtToken = jwtUtil.generateToken(customUserDetailsService.getUserDetail().getUsername());
                 return new ResponseEntity<>("{\"token\":\"" + jwtToken + "\"}", HttpStatus.OK);
             } else {
                 return CafeUtils.getResponseEntity("Please wait for admin approval", HttpStatus.BAD_REQUEST);
             }
         }
-
-        return CafeUtils.getResponseEntity(CafeConstants.BAD_CREDENTIALS, HttpStatus.BAD_REQUEST);}
+        return CafeUtils.getResponseEntity(CafeConstants.BAD_CREDENTIALS, HttpStatus.BAD_REQUEST);
+    }
 
 
     public ResponseEntity<String> createRole(Role role) {
         roleRepo.save(role);
-        return CafeUtils.getResponseEntity("Role with name : "+role.getRole()+" "+CafeConstants.CREATED,HttpStatus.CREATED);
+        return CafeUtils.getResponseEntity("Role with name : " + role.getRole() + " " + CafeConstants.CREATED, HttpStatus.CREATED);
     }
 
 
+    @SneakyThrows
+    public User updateProductById(String userId, Map<String, String> fields) {
+        User loggedInUser = customUserDetailsService.getUserDetail();
+        Optional<User> user = Optional.ofNullable(findById(userId).orElseThrow(() -> new UsernameNotFoundException("User Not Found")));
+        if (!customUserDetailsService.isAdmin() && fields.containsKey("status")) {
+            throw new StatusUpdateException("You are not authorisd to update status of user");
+        } else {
+            fields.forEach((key, value) -> {
+                Field field = ReflectionUtils.findField(User.class, key);
+                assert field != null;
+                field.setAccessible(true);
+                ReflectionUtils.setField(field, user.get(), value);
+            });
+        }
+        return save(user.get());
+    }
 }

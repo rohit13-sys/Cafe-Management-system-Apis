@@ -24,7 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        userDetail = repo.findByEmail(username);
+        userDetail = repo.findByUsername(username);
         if (!Objects.isNull(userDetail)) {
             List<Role> roles=userDetail.getRoles();
             List<GrantedAuthority> grantedAuthorities = roles.stream().map(r -> {
@@ -39,5 +39,14 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     public com.CMS.com.CMS.pojo.User getUserDetail(){
         return userDetail;
+    }
+
+    public boolean isAdmin(){
+        com.CMS.com.CMS.pojo.User loggedInUser=getUserDetail();
+        if(loggedInUser.getRoles().get(0).getRole().equalsIgnoreCase("ADMIN")){
+            return true;
+        }else{
+            return false;
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.CMS.com.CMS.exceptions;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,6 +16,13 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private Map<String, String> exceptionMap(Exception ex){
+        Map<String, String> errors = new HashMap<>();
+        errors.put("errorMessage",ex.getMessage());
+        return errors;
+    }
+
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -33,8 +41,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SQLIntegrityConstraintViolationException.class)
     public Map<String, String> alreadyExistsException(
             SQLIntegrityConstraintViolationException ex) {
-        Map<String, String> errors = new HashMap<>();
-       errors.put("message",ex.getMessage());
-        return errors;
+        return exceptionMap(ex);
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(StatusUpdateException.class)
+    public Map<String,String> statusUpdateException(StatusUpdateException ex){
+        return exceptionMap(ex);
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public Map<String,String> usernameNotFoundException(UsernameNotFoundException ex){
+        return exceptionMap(ex);
     }
 }

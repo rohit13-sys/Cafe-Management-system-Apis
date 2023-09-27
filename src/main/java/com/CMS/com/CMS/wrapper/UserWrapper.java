@@ -15,9 +15,9 @@ import java.util.List;
 public class UserWrapper {
 
     private String id;
-    private String username;
+    private String name;
     private String contactNumber;
-    private String email;
+    private String username;
     private String status;
     private List<Role> roles;
 
