@@ -35,7 +35,6 @@ public class UserController {
         return service.getAllUsers(specs);
     }
 
-
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody User user) {return service.loginUser(user);}
 
@@ -46,7 +45,7 @@ public class UserController {
     }
 
     @PatchMapping("{id}")
-    public User updateUser(@RequestBody Map<String,String> fields, @PathVariable("id") String userId){
+    public UserWrapper updateUser(@RequestBody Map<String,String> fields, @PathVariable("id") String userId){
         return service.updateProductById(userId,fields);
     }
 }

@@ -4,11 +4,13 @@ import com.CMS.com.CMS.JWT.CustomUserDetailsService;
 import com.CMS.com.CMS.JWT.JWTUtil;
 import com.CMS.com.CMS.constants.CafeConstants;
 import com.CMS.com.CMS.exceptions.StatusUpdateException;
+import com.CMS.com.CMS.pojo.EmailDetails;
 import com.CMS.com.CMS.pojo.Role;
 import com.CMS.com.CMS.pojo.User;
 import com.CMS.com.CMS.repository.RoleRepository;
 import com.CMS.com.CMS.repository.UserRepository;
 import com.CMS.com.CMS.utils.CafeUtils;
+import com.CMS.com.CMS.utils.EmailServiceImpl;
 import com.CMS.com.CMS.wrapper.UserWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.client.ResourceAccessException;
 
+import javax.validation.constraints.Email;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +58,9 @@ public class UserService extends GenericService<User> {
 
     @Autowired
     private ObjectMapper mapper;
+
+    @Autowired
+    private EmailServiceImpl emailService;
 
     public UserService(UserRepository repository) {
         super(repository);
@@ -113,12 +119,14 @@ public class UserService extends GenericService<User> {
 
 
     @SneakyThrows
-    public User updateProductById(String userId, Map<String, String> fields) {
-        User loggedInUser = customUserDetailsService.getUserDetail();
+    public UserWrapper updateProductById(String userId, Map<String, String> fields) {
         Optional<User> user = Optional.ofNullable(findById(userId).orElseThrow(() -> new UsernameNotFoundException("User Not Found")));
         if (!customUserDetailsService.isAdmin() && fields.containsKey("status")) {
             throw new StatusUpdateException("You are not authorisd to update status of user");
         } else {
+            if(fields.containsKey("status")){
+                sendMailAllAdmin(fields.get("status"),user.get().getUsername(),getAllAdmins());
+            }
             fields.forEach((key, value) -> {
                 Field field = ReflectionUtils.findField(User.class, key);
                 assert field != null;
@@ -126,6 +134,26 @@ public class UserService extends GenericService<User> {
                 ReflectionUtils.setField(field, user.get(), value);
             });
         }
-        return save(user.get());
+        return convertUserToUSerWrapper(save(user.get()));
+    }
+
+    private void sendMailAllAdmin(String status, String username, List<String> allAdmins) {
+        allAdmins.remove(customUserDetailsService.getUserDetail().getUsername());
+        EmailDetails emailDetails=new EmailDetails();
+        emailDetails.setSubject("THis is email regarding user approval");
+        emailDetails.setRecipient(username);
+        if(status.equalsIgnoreCase("true")){
+            emailDetails.setMsgBody("User : "+username+" is approved by Admin : "+customUserDetailsService.getUserDetail().getUsername());
+        }else {
+            emailDetails.setMsgBody("User : "+username+" is disabled by Admin : "+customUserDetailsService.getUserDetail().getUsername());
+        }
+        emailDetails.setCc(allAdmins.toArray(String[]::new));
+        System.out.println(emailService.sendSimpleMail(emailDetails));
+    }
+
+
+    public List<String> getAllAdmins(){
+        List<User> adminUsers=userRepo.findAllByRolesRole("ADMIN");
+        return adminUsers.stream().map(User::getUsername).collect(Collectors.toList());
     }
 }
