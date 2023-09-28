@@ -19,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AuthorizationServiceException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -28,12 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.client.ResourceAccessException;
 
-import javax.validation.constraints.Email;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -88,7 +83,7 @@ public class UserService extends GenericService<User> {
 
     public ResponseEntity<List<UserWrapper>> getAllUsers(Specification<User> specs) {
         List<User> users = userRepo.findAll(Specification.where(specs));
-        List<UserWrapper> response=users.stream().map(this::convertUserToUSerWrapper).collect(Collectors.toList());
+        List<UserWrapper> response = users.stream().map(this::convertUserToUSerWrapper).collect(Collectors.toList());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -101,7 +96,7 @@ public class UserService extends GenericService<User> {
                 new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword())
         );
         if (auth.isAuthenticated()) {
-            if (customUserDetailsService.getUserDetail().getStatus().equalsIgnoreCase("active")) {
+            if (customUserDetailsService.getUserDetail().getStatus().equalsIgnoreCase("true")) {
                 String jwtToken = jwtUtil.generateToken(customUserDetailsService.getUserDetail().getUsername());
                 return new ResponseEntity<>("{\"token\":\"" + jwtToken + "\"}", HttpStatus.OK);
             } else {
@@ -119,41 +114,77 @@ public class UserService extends GenericService<User> {
 
 
     @SneakyThrows
-    public UserWrapper updateProductById(String userId, Map<String, String> fields) {
+    public UserWrapper updateUserById(String userId, Map<String, String> fields) {
         Optional<User> user = Optional.ofNullable(findById(userId).orElseThrow(() -> new UsernameNotFoundException("User Not Found")));
         if (!customUserDetailsService.isAdmin() && fields.containsKey("status")) {
             throw new StatusUpdateException("You are not authorisd to update status of user");
         } else {
-            if(fields.containsKey("status")){
-                sendMailAllAdmin(fields.get("status"),user.get().getUsername(),getAllAdmins());
+            if (fields.containsKey("status")) {
+                String status = fields.get("status");
+                String messageBody = "";
+                if (status.equalsIgnoreCase("true")) {
+                    messageBody = "User : " + user.get().getUsername() + " is approved by Admin : " + customUserDetailsService.getUserDetail().getUsername();
+                } else {
+                    messageBody = "User : " + user.get().getUsername() + " is disabled by Admin : " + customUserDetailsService.getUserDetail().getUsername();
+                }
+                sendMailAllAdmin(user.get().getUsername(), getAllAdmins(), messageBody, "Email Regarding Account Approval", "text/plain");
             }
             fields.forEach((key, value) -> {
                 Field field = ReflectionUtils.findField(User.class, key);
-                assert field != null;
-                field.setAccessible(true);
-                ReflectionUtils.setField(field, user.get(), value);
+                if (Objects.nonNull(field)) {
+                    field.setAccessible(true);
+                    ReflectionUtils.setField(field, user.get(), value);
+                }
             });
         }
         return convertUserToUSerWrapper(save(user.get()));
     }
 
-    private void sendMailAllAdmin(String status, String username, List<String> allAdmins) {
-        allAdmins.remove(customUserDetailsService.getUserDetail().getUsername());
-        EmailDetails emailDetails=new EmailDetails();
-        emailDetails.setSubject("THis is email regarding user approval");
-        emailDetails.setRecipient(username);
-        if(status.equalsIgnoreCase("true")){
-            emailDetails.setMsgBody("User : "+username+" is approved by Admin : "+customUserDetailsService.getUserDetail().getUsername());
-        }else {
-            emailDetails.setMsgBody("User : "+username+" is disabled by Admin : "+customUserDetailsService.getUserDetail().getUsername());
+    private void sendMailAllAdmin(String recipient, List<String> cc, String messageBody, String subject, String messageType) {
+
+        EmailDetails emailDetails = new EmailDetails();
+        emailDetails.setSubject(subject);
+        emailDetails.setRecipient(recipient);
+        if (!Objects.isNull(cc) && cc.size() > 0) {
+            cc.remove(customUserDetailsService.getUserDetail().getUsername());
+            emailDetails.setCc(cc.toArray(String[]::new));
         }
-        emailDetails.setCc(allAdmins.toArray(String[]::new));
+        emailDetails.setType(messageType);
+        emailDetails.setMsgBody(messageBody);
         System.out.println(emailService.sendSimpleMail(emailDetails));
     }
 
 
-    public List<String> getAllAdmins(){
-        List<User> adminUsers=userRepo.findAllByRolesRole("ADMIN");
+    public List<String> getAllAdmins() {
+        List<User> adminUsers = userRepo.findAllByRolesRole("ADMIN");
         return adminUsers.stream().map(User::getUsername).collect(Collectors.toList());
+    }
+
+    public ResponseEntity<String> checkToken() {
+        return CafeUtils.getResponseEntity("true", HttpStatus.OK);
+    }
+
+    public UserWrapper changePassword(Map<String, String> fields, String userId) {
+        if (!customUserDetailsService.isAdmin()) {
+            User user = customUserDetailsService.getUserDetail();
+            if (userId.equalsIgnoreCase(user.getId()) && fields.get("oldPassword").equals(user.getPassword()) && !fields.get("password").equals(user.getPassword())) {
+                return updateUserById(userId, fields);
+            } else {
+                throw new ResourceAccessException("please give \n correct data in input");
+            }
+        }
+        return updateUserById(userId, fields);
+    }
+
+    public ResponseEntity<String> forgotPassword(String username) {
+        User user = userRepo.findByUsername(username);
+        if (Objects.nonNull(user)) {
+            String messagebody = "<h3>Your Login Details are given below</h3>" +
+                    "<br><b>Username</b> : "+user.getUsername()+
+                   "<br><b>Password</b> : "+user.getPassword()+
+                   "<br><b>Click</b><a href=\"http://localhost:4200\">here</a> <b> to Login!!!!!</b>";
+            sendMailAllAdmin(user.getUsername(), null, messagebody, "Your Password","text/html" );
+        }
+        return CafeUtils.getResponseEntity("Check your email for credentials", HttpStatus.ACCEPTED);
     }
 }

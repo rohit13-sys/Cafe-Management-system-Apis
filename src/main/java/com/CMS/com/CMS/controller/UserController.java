@@ -29,7 +29,6 @@ public class UserController {
     }
 
     @GetMapping
-//    @PreAuthorize("hasRole('ADMIN')"
     @Secured("ADMIN")
         public ResponseEntity<List<UserWrapper>> getAllUsers(@SearchSpec Specification<User> specs) {
         return service.getAllUsers(specs);
@@ -45,7 +44,18 @@ public class UserController {
     }
 
     @PatchMapping("{id}")
-    public UserWrapper updateUser(@RequestBody Map<String,String> fields, @PathVariable("id") String userId){
-        return service.updateProductById(userId,fields);
+    public UserWrapper updateUser(@RequestBody Map<String,String> fields, @PathVariable("id") String userId){return service.updateUserById(userId,fields);}
+
+    @GetMapping("/checkToken")
+    public ResponseEntity<String> checkToken(){return service.checkToken();}
+
+    @PostMapping("/changePassword/{id}")
+    public UserWrapper changePassword(@RequestBody Map<String,String> fields,@PathVariable("id") String userId){
+        return service.changePassword(fields,userId);
+    }
+
+    @PostMapping("/forgotPassword")
+    public ResponseEntity<String> forgotPassword(@RequestParam(value = "username") String username){
+        return service.forgotPassword(username);
     }
 }
